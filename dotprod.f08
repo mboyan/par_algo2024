@@ -60,7 +60,27 @@ real(kind=8), dimension(:), intent(in) :: x, y
 ! (as in the allgather variant), or you can define only a scalar coarray variable
 ! and an array on image 1, and then use 'get' operations.
 
-dot_gatherbcast = 0.d0
+! Solution:
+real(kind=8), save :: local_dot_gatherbcast
+real(kind=8), dimension(:), allocatable :: local_dots(:)[:]
+integer :: me, np, i
+
+np = num_images()
+me = this_image()
+
+if ((.not. allocated(local_dots)) .or. (size(local_dots) /= np)) then
+    allocate(local_dots(np)[*])
+end if
+
+local_dots(me) = dot_product(x, y)
+
+sync all
+
+if (me == 1) then
+    local_dot_gatherbcast = sum(local_dots)
+end if
+
+dot_gatherbcast = local_dot_gatherbcast
 
 end function dot_gatherbcast
 
