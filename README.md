@@ -43,8 +43,18 @@ where you do not need to install additional software.
 The programming language used throughout the course is **Fortran 2018**. It has native support for
 parallel programming, so in principle all you will need is a Fortran compiler.
 We recommend using the GNU compiler ``gfortran``. To enable actual parallel execution of your code,
-it relies on the OpenCoarrays library, which you have to install separately:
-See [this page](http://www.opencoarrays.org/) for instructions on how to do this.
+it relies on the OpenCoarrays library, which you have to install separately.
+
+To install all you need in an Ubuntu terminal, you can use:
+```bash
+sudo apt install build-essential libopencoarrays-openmpi-dev
+```
+On Windows, you can configure the "Windows Subsystem for Linux" WSL to use Ubuntu as Linux distribution (and this should be the default).
+On other Linux systems, the package manager may be something other than ``apt``, on MacOS the command is called ``brew`` and requires the Homebrew package manager to be installed.
+Package names may also differ between distributions. Make sure the ``opencoarrays`` package you install has MPI support,
+here indicated by the ``-openmpi`` in the name.
+
+See [this page](http://www.opencoarrays.org/) for general instructions for various systems.
 
 On the DelftBlue supercomputer, you do not need to install anything. Instead, you should load the required modules
 and you're good to go:
@@ -60,16 +70,7 @@ rules for "building" your program into a file called ``Makefile``, and then uses
 these rules to build the program from the source code.
 
 In this repository you will find a fully functional ``Makefile`` geared towards
-use on DelftBlue. On your own system, you need to set the environment variable ``OPENCOARRAYS_ROOT``
-to the directory where the library is installed. On my Ubuntu laptop, I installed the library using
-```bash
-sudo apt install libopencoarrays-openmpi-dev
-```
-and in the file ``.bashrc`` (which is executed at the start of every terminal session), added the line
-```bash
-export OPENCOARRAYS_ROOT=/usr/lib/x86_64-linux-gnu/open-coarrays/openmpi/
-```
-On DelftBlue, it is sufficient to load the module as desribed above.
+use on DelftBlue. In principle, it should also work on your own computer, though.
 
 # 1. Hello World!
 
@@ -121,3 +122,35 @@ One idea for your own variant is to replace the ``sync all`` statements (partly)
 Run the main program for the maximum number of processes available on your computer and different values of the vector length N.
 Which variant is the best?
 
+# 3. Parallel Sample Sort
+
+The paralllel sorting algorithm (described in Section 1.8 of the book by Rob Bisseling) is implemented as ``sort_coarray`` in the file ``sorting.f90``.
+A corresponding driver routine is available in ``main_sorting.f90``. It takes a single integer as command-line argument: The (approximate)
+number of elements to be assigned to each process. Your input will be rounded up to a multiple of P^2, where P is the number of processes (images)
+running the program.
+
+## Unit testing
+
+This is a slightly more complex program than we saw before: ``sort_coarray`` calls other functions like ``quicksort`` and ``mergeparts``. To assure that all
+components work properly, it is useful to employ a **test framework**. Here we will use [fortuno](https://github.com/fortuno-repos/fortuno-coarray).
+This is a fortran library that allows you to easily write and execute small test programs. On DelftBlue we have installed it for you, and the ``Makefile``
+has been extended with targets ``main_test.x`` and ``test``. If you type ``make test``, the test driver is built and executed for a varying number of
+processes.
+
+**Unfortunately**, the co-array extension of fortuno did not work on my Ubuntu laptop. I would therefore presently __not__ recommend installing it
+but trying it out on DelftBlue instead.
+
+## "Tasks"
+
+- Use the dot product and sorting examples to familiarize yourself with Fortran, DelftBlue job submission, make files
+(e.g., try switching to debugging options for your build).
+- There may be bugs in the sorting program (every program always has them...). If you encounter one, you may try to add 
+unit tests that isolate it and then fix the problem. A patch or pull request with a bug fix to this repository may put your
+teachers in a good mood during the final oral exam...
+- Use the structure of the sorting program as inspiration for your first bigger programming task: the Sieve of Eratosthenes
+
+**Note:** To run this (or any) program on DelftBlue compute nodes (rather than the login node),
+use ``srun`` instead of ``mpirun``. This requires a number of flags (in particular the ``--mem-per-cpu`` flag),
+that are most conveniently set in a job script. See ``benchmarks.slurm`` for an example of a job script, and
+the [DelftBlue documentation](https://doc.dhpc.tudelft.nl) for many more. For quick tests, do not use the ``--exclusive``
+flag as it will request a full node, which may make your waiting times long.
